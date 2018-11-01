@@ -1,0 +1,2 @@
+rootProject.name = 'StepReleaseDispatcher'
+include 'app', 'config', 'server', 'scheduler', 'notifier', 'releasedispatcher'

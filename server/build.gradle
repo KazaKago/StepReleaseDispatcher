@@ -1,0 +1,24 @@
+apply plugin: 'java-library'
+apply plugin: 'kotlin'
+
+sourceCompatibility = 1.8
+
+compileKotlin {
+    kotlinOptions.jvmTarget = "1.8"
+}
+compileTestKotlin {
+    kotlinOptions.jvmTarget = "1.8"
+}
+
+dependencies {
+    implementation project(":scheduler")
+    implementation project(":notifier")
+    implementation project(":config")
+    implementation project(":releasedispatcher")
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+    implementation "io.ktor:ktor-server-netty:$ktor_version"
+    implementation "io.ktor:ktor-html-builder:$ktor_version"
+    implementation 'ch.qos.logback:logback-classic:1.2.3'
+
+    testImplementation group: 'junit', name: 'junit', version: '4.12'
+}

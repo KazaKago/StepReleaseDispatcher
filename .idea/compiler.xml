@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="CompilerConfiguration">
+    <bytecodeTargetLevel>
+      <module name="KtorSample_main" target="1.8" />
+      <module name="KtorSample_test" target="1.8" />
+      <module name="notification_main" target="1.8" />
+      <module name="notification_test" target="1.8" />
+      <module name="StepReleaseDispatcher_main" target="1.8" />
+      <module name="StepReleaseDispatcher_test" target="1.8" />
+    </bytecodeTargetLevel>
+  </component>
+</project>
