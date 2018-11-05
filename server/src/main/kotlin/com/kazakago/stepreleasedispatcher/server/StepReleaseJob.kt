@@ -1,6 +1,5 @@
 package com.kazakago.stepreleasedispatcher.server
 
-import com.google.api.services.androidpublisher.model.Track
 import com.kazakago.stepreleasedispatcher.config.ApplicationConfig
 import com.kazakago.stepreleasedispatcher.notifier.NotificationProvider
 import com.kazakago.stepreleasedispatcher.notifier.NotificationProviders
@@ -13,23 +12,20 @@ class StepReleaseJob : Job {
     private val notificationProviders = initializeNotificationProvider()
 
     override fun execute(context: JobExecutionContext) {
-        val stepReleaseDispatcher = ReleaseDispatcher(
-                applicationName = ApplicationConfig.getApplicationName(),
-                packageName = ApplicationConfig.getPackageName(),
-                p12File = ApplicationConfig.getP12KeyFile(),
-                serviceAccountEmail = ApplicationConfig.getServiceAccountEmail(),
-                userFractionSteps = ApplicationConfig.getUserFractionStep()
-        )
-        stepReleaseDispatcher.onUpdatedTrack = { newTrack: Track, oldTrack: Track ->
-            notificationProviders.postExpansionMessage(newTrack, oldTrack)
-        }
-        stepReleaseDispatcher.onNoUpdatedTrack = { currentTrack: Track ->
-            notificationProviders.postNoExpansionMessage(currentTrack)
-        }
-        stepReleaseDispatcher.onError = { exception ->
+        try {
+            val stepReleaseDispatcher = ReleaseDispatcher(
+                    applicationName = ApplicationConfig.getApplicationName(),
+                    packageName = ApplicationConfig.getPackageName(),
+                    p12File = ApplicationConfig.getP12KeyFile(),
+                    serviceAccountEmail = ApplicationConfig.getServiceAccountEmail(),
+                    userFractionSteps = ApplicationConfig.getUserFractionStep())
+            when (val result = stepReleaseDispatcher.executeStepRelease()) {
+                is ReleaseDispatcher.StepReleaseResult.UpdatedTrack -> notificationProviders.postExpansionMessage(result.newTrack, result.oldTrack)
+                is ReleaseDispatcher.StepReleaseResult.NoUpdatedTrack -> notificationProviders.postNoExpansionMessage(result.currentTrack)
+            }
+        } catch (exception: Exception) {
             notificationProviders.postErrorMessage(exception)
         }
-        stepReleaseDispatcher.executeStepRelease()
     }
 
     private fun initializeNotificationProvider(): NotificationProviders {

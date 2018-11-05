@@ -8,6 +8,7 @@ import com.kazakago.stepreleasedispatcher.notifier.NotificationProviders
 import com.kazakago.stepreleasedispatcher.releasedispatcher.ReleaseDispatcher
 import com.kazakago.stepreleasedispatcher.scheduler.StepReleaseJobScheduler
 import io.ktor.application.call
+import io.ktor.application.install
 import io.ktor.html.respondHtml
 import io.ktor.http.content.PartData
 import io.ktor.http.content.forEachPart
@@ -20,26 +21,31 @@ import io.ktor.routing.routing
 import io.ktor.server.engine.ApplicationEngine
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
+import io.ktor.webjars.Webjars
 import kotlinx.html.*
 import java.util.concurrent.TimeUnit
 
 object ServerProcessor {
 
     private val nativeServer: ApplicationEngine
-    private val releaseDispatcher: ReleaseDispatcher
-    private val stepReleaseJobScheduler: StepReleaseJobScheduler<StepReleaseJob>
-    private val notificationProviders: NotificationProviders
+    private val releaseDispatcher: ReleaseDispatcher = initializeReleaseDispatcher()
+    private val stepReleaseJobScheduler: StepReleaseJobScheduler<StepReleaseJob> = initializeStepReleaseScheduler()
+    private val notificationProviders: NotificationProviders = initializeNotificationProvider()
 
     init {
-        releaseDispatcher = initializeReleaseDispatcher()
-        notificationProviders = initializeNotificationProvider()
-        stepReleaseJobScheduler = initializeStepReleaseScheduler()
         nativeServer = embeddedServer(Netty, port = 8080) {
+            install(Webjars)
             routing {
                 get("/") {
+                    val validConfig = runCatching { releaseDispatcher.validConfig() }
+                    val currentTrackInfo = runCatching { (releaseDispatcher.currentTrackInfo()) }
                     call.respondHtml {
                         head {
                             title { +ApplicationConfig.getApplicationName() }
+                            styleLink("/webjars/bootstrap/css/bootstrap.min.css")
+                            script(src = "/webjars/jquery/jquery.min.js") {}
+                            script(src = "/webjars/popper.js/umd/popper.min.js") {}
+                            script(src = "/webjars/bootstrap/js/bootstrap.min.js") {}
                         }
                         body {
                             h1 {
@@ -49,24 +55,23 @@ object ServerProcessor {
                                 +"Status"
                             }
                             p {
-                                try {
-                                    releaseDispatcher.validConfig()
+                                if (validConfig.isSuccess) {
                                     +"Config: OK"
-                                } catch (exception: Exception) {
-                                    +"Config: Error ${exception.localizedMessage}"
+                                } else {
+                                    +"Config: Error ${validConfig.exceptionOrNull()?.localizedMessage}"
                                 }
                             }
                             p {
-                                try {
-                                    +trackInfoToString(releaseDispatcher.currentTrackInfo())
-                                } catch (exception: Exception) {
-                                    +"Error ${exception.localizedMessage}"
+                                if (currentTrackInfo.isSuccess) {
+                                    +trackInfoToString(currentTrackInfo.getOrThrow())
+                                } else {
+                                    +"Error ${currentTrackInfo.exceptionOrNull()?.localizedMessage}"
                                 }
                             }
                             h2 {
                                 +"Operation"
                             }
-                            form("/executeStepRelease", method = FormMethod.post) {
+                            form("/execute/step_release", method = FormMethod.post) {
                                 p {
                                     submitInput { value = "executeStepRelease" }
                                 }
@@ -176,9 +181,55 @@ object ServerProcessor {
                     stepReleaseJobScheduler.shutdown()
                     call.respondRedirect("/")
                 }
-                post("/executeStepRelease") {
-                    dispatchStepRelease()
-                    call.respondRedirect("/")
+                post("/execute/step_release") {
+                    val result = runCatching { dispatchStepRelease() }
+                    call.respondHtml {
+                        head {
+                            title { +ApplicationConfig.getApplicationName() }
+                            styleLink("/webjars/bootstrap/css/bootstrap.min.css")
+                            script(src = "/webjars/jquery/jquery.min.js") {}
+                            script(src = "/webjars/popper.js/umd/popper.min.js") {}
+                            script(src = "/webjars/bootstrap/js/bootstrap.min.js") {}
+                        }
+                        body {
+                            if (result.isSuccess) {
+                                val nativeResult = result.getOrThrow()
+                                when (nativeResult) {
+                                    is ReleaseDispatcher.StepReleaseResult.UpdatedTrack -> {
+                                        h1 {
+                                            +"Track Updated!"
+                                        }
+                                        p {
+                                            +trackInfoToString(nativeResult.newTrack)
+                                        }
+                                        p {
+                                            +trackInfoToString(nativeResult.oldTrack)
+                                        }
+                                    }
+                                    is ReleaseDispatcher.StepReleaseResult.NoUpdatedTrack -> {
+                                        h1 {
+                                            +"No Updated"
+                                        }
+                                        p {
+                                            +trackInfoToString(nativeResult.currentTrack)
+                                        }
+                                    }
+                                }
+                            } else {
+                                h1 {
+                                    +"Error Occurred"
+                                }
+                                p {
+                                    +"Error ${result.exceptionOrNull()?.localizedMessage}"
+                                }
+                            }
+                            form("/", method = FormMethod.get) {
+                                p {
+                                    submitInput { value = "back to Top" }
+                                }
+                            }
+                        }
+                    }
                 }
                 post("/upload/p12") {
                     call.receiveMultipart().apply {
@@ -291,28 +342,16 @@ object ServerProcessor {
     }
 
     private fun initializeReleaseDispatcher(): ReleaseDispatcher {
-        val releaseDispatcher = ReleaseDispatcher(
+        return ReleaseDispatcher(
                 applicationName = ApplicationConfig.getApplicationName(),
                 packageName = ApplicationConfig.getPackageName(),
                 p12File = ApplicationConfig.getP12KeyFile(),
                 serviceAccountEmail = ApplicationConfig.getServiceAccountEmail(),
-                userFractionSteps = ApplicationConfig.getUserFractionStep()
-        )
-        releaseDispatcher.onUpdatedTrack = { newTrack: Track, oldTrack: Track ->
-            //TODO 結果ページに飛ばす
-            notificationProviders.postExpansionMessage(newTrack, oldTrack)
-        }
-        releaseDispatcher.onNoUpdatedTrack = { currentTrack ->
-            //TODO 結果ページに飛ばす
-        }
-        releaseDispatcher.onError = { exception ->
-            //TODO 結果ページに飛ばす
-        }
-        return releaseDispatcher
+                userFractionSteps = ApplicationConfig.getUserFractionStep())
     }
 
-    private fun dispatchStepRelease() {
-        releaseDispatcher.executeStepRelease()
+    private fun dispatchStepRelease(): ReleaseDispatcher.StepReleaseResult {
+        return releaseDispatcher.executeStepRelease()
     }
 
     private fun trackInfoToString(track: Track): String {

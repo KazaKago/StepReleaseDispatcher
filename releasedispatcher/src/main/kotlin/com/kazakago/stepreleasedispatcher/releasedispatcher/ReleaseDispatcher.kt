@@ -3,8 +3,6 @@ package com.kazakago.stepreleasedispatcher.releasedispatcher
 import com.google.api.client.repackaged.com.google.common.base.Preconditions
 import com.google.api.services.androidpublisher.model.Track
 import java.io.File
-import java.io.IOException
-import java.security.GeneralSecurityException
 
 class ReleaseDispatcher(var applicationName: String, var packageName: String, var p12File: File, var serviceAccountEmail: String, var userFractionSteps: List<Double>) {
 
@@ -14,9 +12,10 @@ class ReleaseDispatcher(var applicationName: String, var packageName: String, va
         class Complete(val versionCodes: List<Long>) : ReleaseUpdateType()
     }
 
-    var onUpdatedTrack: ((newTrack: Track, oldTrack: Track) -> Unit)? = null
-    var onNoUpdatedTrack: ((currentTrack: Track) -> Unit)? = null
-    var onError: ((exception: Exception) -> Unit)? = null
+    sealed class StepReleaseResult {
+        class UpdatedTrack(val newTrack: Track, val oldTrack: Track) : StepReleaseResult()
+        class NoUpdatedTrack(val currentTrack: Track) : StepReleaseResult()
+    }
 
     fun validConfig() {
         Preconditions.checkArgument(packageName.isNotEmpty(), "ApplicationConfig.PACKAGE_NAME cannot be null or empty!")
@@ -39,43 +38,32 @@ class ReleaseDispatcher(var applicationName: String, var packageName: String, va
         return edits.tracks().get(packageName, appEdit.id, TrackType.Production.value).execute()
     }
 
-    fun executeStepRelease() {
-        try {
-            // Create the API service.
-            val service = AndroidPublisherHelper.init(applicationName = applicationName, serviceAccountEmail = serviceAccountEmail, p12File = p12File)
-            val edits = service.edits()
+    fun executeStepRelease(): StepReleaseResult {
+        // Create the API service.
+        val service = AndroidPublisherHelper.init(applicationName = applicationName, serviceAccountEmail = serviceAccountEmail, p12File = p12File)
+        val edits = service.edits()
 
-            // Create a new edit to make changes.
-            val editRequest = edits.insert(packageName, null)
-            val appEdit = editRequest.execute()
+        // Create a new edit to make changes.
+        val editRequest = edits.insert(packageName, null)
+        val appEdit = editRequest.execute()
 
-            // Get current track.
-            val currentTrack = edits.tracks().get(packageName, appEdit.id, TrackType.Production.value).execute()
+        // Get current track.
+        val currentTrack = edits.tracks().get(packageName, appEdit.id, TrackType.Production.value).execute()
 
-            // Get update information to be applied.
-            val releaseUpdateType = classifyReleaseUpdateType(currentTrack)
+        // Get update information to be applied.
+        val releaseUpdateType = classifyReleaseUpdateType(currentTrack)
 
-            if (releaseUpdateType != ReleaseUpdateType.None) {
-                //update edit.
-                val newTrack = generateReleaseUpdate(currentTrack, releaseUpdateType)
-                edits.tracks().update(packageName, appEdit.id, TrackType.Production.value, newTrack).execute()
+        return if (releaseUpdateType != ReleaseUpdateType.None) {
+            //update edit.
+            val newTrack = generateReleaseUpdate(currentTrack, releaseUpdateType)
+            edits.tracks().update(packageName, appEdit.id, TrackType.Production.value, newTrack).execute()
 
-                // Commit changes for edit.
-                edits.commit(packageName, appEdit.id).execute()
+            // Commit changes for edit.
+            edits.commit(packageName, appEdit.id).execute()
 
-                onUpdatedTrack?.invoke(newTrack, currentTrack)
-            } else {
-                onNoUpdatedTrack?.invoke(currentTrack)
-            }
-        } catch (ex: IOException) {
-            ex.printStackTrace()
-            onError?.invoke(ex)
-        } catch (ex: GeneralSecurityException) {
-            ex.printStackTrace()
-            onError?.invoke(ex)
-        } catch (ex: IllegalArgumentException) {
-            ex.printStackTrace()
-            onError?.invoke(ex)
+            StepReleaseResult.UpdatedTrack(newTrack, currentTrack)
+        } else {
+            StepReleaseResult.NoUpdatedTrack(currentTrack)
         }
     }
 
