@@ -2,7 +2,7 @@ package com.kazakago.stepreleasedispatcher.server
 
 import com.google.api.services.androidpublisher.model.Track
 import com.google.api.services.androidpublisher.model.TrackRelease
-import com.kazakago.stepreleasedispatcher.config.ApplicationConfig
+import com.kazakago.stepreleasedispatcher.config.ConfigLoader
 import com.kazakago.stepreleasedispatcher.notifier.NotificationProvider
 import com.kazakago.stepreleasedispatcher.notifier.NotificationProviders
 import com.kazakago.stepreleasedispatcher.releasedispatcher.ReleaseDispatcher
@@ -28,6 +28,7 @@ import java.util.concurrent.TimeUnit
 object ServerProcessor {
 
     private val nativeServer: ApplicationEngine
+    private val config = ConfigLoader.load()
     private val releaseDispatcher: ReleaseDispatcher = initializeReleaseDispatcher()
     private val stepReleaseJobScheduler: StepReleaseJobScheduler<StepReleaseJob> = initializeStepReleaseScheduler()
     private val notificationProviders: NotificationProviders = initializeNotificationProvider()
@@ -41,136 +42,149 @@ object ServerProcessor {
                     val currentTrackInfo = runCatching { (releaseDispatcher.currentTrackInfo()) }
                     call.respondHtml {
                         head {
-                            title { +ApplicationConfig.getApplicationName() }
+                            meta(charset = "utf-8")
+                            meta(name = "viewport", content = "width=device-width, initial-scale=1, shrink-to-fit=no")
                             styleLink("/webjars/bootstrap/css/bootstrap.min.css")
+                            title { +config.applicationName }
+                        }
+                        body {
+                            nav(classes = "navbar navbar-dark bg-dark") {
+                                a(classes = "navbar-brand", href = "#") {
+                                    +config.applicationName
+                                }
+                            }
+                            main(classes = "container") {
+                                div(classes = "jumbotron jumbotron-fluid") {
+                                    div(classes = "container") {
+                                        h1(classes = "display-4") {
+                                            +"Status"
+                                        }
+                                        hr(classes = "my-4")
+                                        p(classes = "lead") {
+                                            if (validConfig.isSuccess) {
+                                                +"Config: OK"
+                                            } else {
+                                                +"Config: Error ${validConfig.exceptionOrNull()?.localizedMessage}"
+                                            }
+                                        }
+                                        p(classes = "lead") {
+                                            if (currentTrackInfo.isSuccess) {
+                                                +trackInfoToString(currentTrackInfo.getOrThrow())
+                                            } else {
+                                                +"Error ${currentTrackInfo.exceptionOrNull()?.localizedMessage}"
+                                            }
+                                        }
+                                    }
+                                }
+                                h2(classes = "display-4") {
+                                    +"Operation"
+                                }
+                                hr(classes = "my-4")
+                                form("/execute/step_release", method = FormMethod.post) {
+                                    p {
+                                        submitInput { value = "executeStepRelease" }
+                                    }
+                                }
+                                h2 {
+                                    +"Schedule"
+                                }
+                                p {
+                                    if (stepReleaseJobScheduler.isActive()) {
+                                        +"Status: Active"
+                                    } else {
+                                        +"Status: Inactive"
+                                    }
+                                }
+                                p {
+                                    +"Scheduler Switch"
+                                }
+                                p {
+                                    form("/scheduler/start", method = FormMethod.post) {
+                                        submitInput { value = "start" }
+                                    }
+                                    form("/scheduler/stop", method = FormMethod.post) {
+                                        submitInput { value = "stop" }
+                                    }
+                                }
+                                form("/config/dispatch_schedule", encType = FormEncType.multipartFormData, method = FormMethod.post) {
+                                    p {
+                                        +"DispatchSchedule: "
+                                        textInput(name = "dispatch_schedule", classes = "form-control") { value = config.dispatchSchedule }
+                                    }
+                                    p {
+                                        submitInput { value = "register" }
+                                    }
+                                }
+                                h2 {
+                                    +"Config"
+                                }
+                                h3 {
+                                    +"Required"
+                                }
+                                form("/config/package_name", encType = FormEncType.multipartFormData, method = FormMethod.post) {
+                                    p {
+                                        +"PackageName: "
+                                        textInput(name = "package_name", classes = "form-control") { value = config.packageName }
+                                    }
+                                    p {
+                                        submitInput { value = "register" }
+                                    }
+                                }
+                                form("/config/email", encType = FormEncType.multipartFormData, method = FormMethod.post) {
+                                    p {
+                                        +"ServiceAccountEmail: "
+                                        textInput(name = "email", classes = "form-control") { value = config.serviceAccountEmail.toString() }
+                                    }
+                                    p {
+                                        submitInput { value = "register" }
+                                    }
+                                }
+                                form("/config/user_fraction_step", encType = FormEncType.multipartFormData, method = FormMethod.post) {
+                                    p {
+                                        +"UserFractionStep: "
+                                        textInput(name = "user_fraction_step", classes = "form-control") { value = config.userFractionStep.joinToString(",") }
+                                    }
+                                    p {
+                                        submitInput { value = "register" }
+                                    }
+                                }
+                                form("/upload/p12", encType = FormEncType.multipartFormData, method = FormMethod.post) {
+                                    acceptCharset = "utf-8"
+                                    p {
+                                        label { +"p12 File field: " }
+                                        fileInput { name = "p12file" }
+                                    }
+                                    p {
+                                        submitInput { value = "upload" }
+                                    }
+                                }
+                                h3 {
+                                    +"Optional"
+                                }
+                                form("/config/application_name", encType = FormEncType.multipartFormData, method = FormMethod.post) {
+                                    p {
+                                        +"ApplicationName: "
+                                        textInput(name = "application_name", classes = "form-control") { value = config.applicationName }
+                                    }
+                                    p {
+                                        submitInput { value = "register" }
+                                    }
+                                }
+                                form("/config/slack_web_hook_url", encType = FormEncType.multipartFormData, method = FormMethod.post) {
+                                    p {
+                                        +"SlackWebHookUrl: "
+                                        textInput(name = "slack_web_hook_url", classes = "form-control") { value = config.slackWebHookUrl }
+                                    }
+                                    p {
+                                        submitInput { value = "register" }
+                                    }
+                                }
+                            }
                             script(src = "/webjars/jquery/jquery.min.js") {}
                             script(src = "/webjars/popper.js/umd/popper.min.js") {}
                             script(src = "/webjars/bootstrap/js/bootstrap.min.js") {}
                         }
-                        body {
-                            h1 {
-                                +ApplicationConfig.getApplicationName()
-                            }
-                            h2 {
-                                +"Status"
-                            }
-                            p {
-                                if (validConfig.isSuccess) {
-                                    +"Config: OK"
-                                } else {
-                                    +"Config: Error ${validConfig.exceptionOrNull()?.localizedMessage}"
-                                }
-                            }
-                            p {
-                                if (currentTrackInfo.isSuccess) {
-                                    +trackInfoToString(currentTrackInfo.getOrThrow())
-                                } else {
-                                    +"Error ${currentTrackInfo.exceptionOrNull()?.localizedMessage}"
-                                }
-                            }
-                            h2 {
-                                +"Operation"
-                            }
-                            form("/execute/step_release", method = FormMethod.post) {
-                                p {
-                                    submitInput { value = "executeStepRelease" }
-                                }
-                            }
-                            h2 {
-                                +"Schedule"
-                            }
-                            p {
-                                if (stepReleaseJobScheduler.isActive()) {
-                                    +"Status: Active"
-                                } else {
-                                    +"Status: Inactive"
-                                }
-                            }
-                            p {
-                                +"Scheduler Switch"
-                            }
-                            p {
-                                form("/scheduler/start", method = FormMethod.post) {
-                                    submitInput { value = "start" }
-                                }
-                                form("/scheduler/stop", method = FormMethod.post) {
-                                    submitInput { value = "stop" }
-                                }
-                            }
-                            form("/config/dispatch_schedule", encType = FormEncType.multipartFormData, method = FormMethod.post) {
-                                p {
-                                    +"DispatchSchedule: "
-                                    textInput(name = "dispatch_schedule") { value = ApplicationConfig.getDispatchSchedule() }
-                                }
-                                p {
-                                    submitInput { value = "register" }
-                                }
-                            }
-                            h2 {
-                                +"Config"
-                            }
-                            h3 {
-                                +"Required"
-                            }
-                            form("/config/package_name", encType = FormEncType.multipartFormData, method = FormMethod.post) {
-                                p {
-                                    +"PackageName: "
-                                    textInput(name = "package_name") { value = ApplicationConfig.getPackageName() }
-                                }
-                                p {
-                                    submitInput { value = "register" }
-                                }
-                            }
-                            form("/config/email", encType = FormEncType.multipartFormData, method = FormMethod.post) {
-                                p {
-                                    +"ServiceAccountEmail: "
-                                    textInput(name = "email") { value = ApplicationConfig.getServiceAccountEmail() }
-                                }
-                                p {
-                                    submitInput { value = "register" }
-                                }
-                            }
-                            form("/config/user_fraction_step", encType = FormEncType.multipartFormData, method = FormMethod.post) {
-                                p {
-                                    +"UserFractionStep: "
-                                    textInput(name = "user_fraction_step") { value = ApplicationConfig.getUserFractionStep().joinToString(",") }
-                                }
-                                p {
-                                    submitInput { value = "register" }
-                                }
-                            }
-                            form("/upload/p12", encType = FormEncType.multipartFormData, method = FormMethod.post) {
-                                acceptCharset = "utf-8"
-                                p {
-                                    label { +"p12 File field: " }
-                                    fileInput { name = "p12file" }
-                                }
-                                p {
-                                    submitInput { value = "upload" }
-                                }
-                            }
-                            h3 {
-                                +"Optional"
-                            }
-                            form("/config/application_name", encType = FormEncType.multipartFormData, method = FormMethod.post) {
-                                p {
-                                    +"ApplicationName: "
-                                    textInput(name = "application_name") { value = ApplicationConfig.getApplicationName() }
-                                }
-                                p {
-                                    submitInput { value = "register" }
-                                }
-                            }
-                            form("/config/slack_web_hook_url", encType = FormEncType.multipartFormData, method = FormMethod.post) {
-                                p {
-                                    +"SlackWebHookUrl: "
-                                    textInput(name = "slack_web_hook_url") { value = ApplicationConfig.getSlackWebHookUrl() }
-                                }
-                                p {
-                                    submitInput { value = "register" }
-                                }
-                            }
-                        }
+
                     }
                 }
                 post("/scheduler/start") {
@@ -185,7 +199,7 @@ object ServerProcessor {
                     val result = runCatching { dispatchStepRelease() }
                     call.respondHtml {
                         head {
-                            title { +ApplicationConfig.getApplicationName() }
+                            title { +config.applicationName }
                             styleLink("/webjars/bootstrap/css/bootstrap.min.css")
                             script(src = "/webjars/jquery/jquery.min.js") {}
                             script(src = "/webjars/popper.js/umd/popper.min.js") {}
@@ -235,7 +249,7 @@ object ServerProcessor {
                     call.receiveMultipart().apply {
                         forEachPart { part ->
                             if (part.name == "p12file" && part is PartData.FileItem) {
-                                part.streamProvider().use { inputStream -> ApplicationConfig.putP12KeyFile(inputStream) }
+                                part.streamProvider().use { inputStream -> ConfigLoader.putP12KeyFile(inputStream) }
                             }
                             part.dispose()
                         }
@@ -246,7 +260,8 @@ object ServerProcessor {
                     call.receiveMultipart().apply {
                         forEachPart { part ->
                             if (part.name == "package_name" && part is PartData.FormItem) {
-                                ApplicationConfig.putPackageName(part.value)
+                                config.packageName = part.value
+                                ConfigLoader.apply(config)
                                 releaseDispatcher.packageName = part.value
                             }
                             part.dispose()
@@ -258,7 +273,8 @@ object ServerProcessor {
                     call.receiveMultipart().apply {
                         forEachPart { part ->
                             if (part.name == "email" && part is PartData.FormItem) {
-                                ApplicationConfig.putServiceAccountEmail(part.value)
+                                config.serviceAccountEmail = part.value
+                                ConfigLoader.apply(config)
                                 releaseDispatcher.serviceAccountEmail = part.value
                             }
                             part.dispose()
@@ -270,7 +286,8 @@ object ServerProcessor {
                     call.receiveMultipart().apply {
                         forEachPart { part ->
                             if (part.name == "application_name" && part is PartData.FormItem) {
-                                ApplicationConfig.putApplicationName(part.value)
+                                config.applicationName = part.value
+                                ConfigLoader.apply(config)
                                 releaseDispatcher.applicationName = part.value
                                 notificationProviders.applicationName = part.value
                             }
@@ -283,7 +300,8 @@ object ServerProcessor {
                     call.receiveMultipart().apply {
                         forEachPart { part ->
                             if (part.name == "slack_web_hook_url" && part is PartData.FormItem) {
-                                ApplicationConfig.putSlackWebHookUrl(part.value)
+                                config.slackWebHookUrl = part.value
+                                ConfigLoader.apply(config)
                                 notificationProviders.slackType = NotificationProvider.Type.Slack(part.value)
                             }
                             part.dispose()
@@ -296,7 +314,8 @@ object ServerProcessor {
                         forEachPart { part ->
                             if (part.name == "user_fraction_step" && part is PartData.FormItem) {
                                 val steps = part.value.split(",").map { it.toDouble() }
-                                ApplicationConfig.putUserFractionStep(steps)
+                                config.userFractionStep = steps
+                                ConfigLoader.apply(config)
                                 releaseDispatcher.userFractionSteps = steps
                             }
                             part.dispose()
@@ -308,7 +327,8 @@ object ServerProcessor {
                     call.receiveMultipart().apply {
                         forEachPart { part ->
                             if (part.name == "dispatch_schedule" && part is PartData.FormItem) {
-                                ApplicationConfig.putDispatchSchedule(part.value)
+                                config.dispatchSchedule = part.value
+                                ConfigLoader.apply(config)
                                 stepReleaseJobScheduler.dispatchSchedule = part.value
                             }
                             part.dispose()
@@ -331,27 +351,36 @@ object ServerProcessor {
 
     private fun initializeNotificationProvider(): NotificationProviders {
         return NotificationProviders(
-                applicationName = ApplicationConfig.getApplicationName(),
-                slackType = NotificationProvider.Type.Slack(ApplicationConfig.getSlackWebHookUrl()))
+                applicationName = config.applicationName,
+                slackType = NotificationProvider.Type.Slack(config.slackWebHookUrl))
     }
 
     private fun initializeStepReleaseScheduler(): StepReleaseJobScheduler<StepReleaseJob> {
         return StepReleaseJobScheduler(
-                dispatchSchedule = ApplicationConfig.getDispatchSchedule(),
+                dispatchSchedule = config.dispatchSchedule,
                 jobClass = StepReleaseJob::class)
     }
 
     private fun initializeReleaseDispatcher(): ReleaseDispatcher {
         return ReleaseDispatcher(
-                applicationName = ApplicationConfig.getApplicationName(),
-                packageName = ApplicationConfig.getPackageName(),
-                p12File = ApplicationConfig.getP12KeyFile(),
-                serviceAccountEmail = ApplicationConfig.getServiceAccountEmail(),
-                userFractionSteps = ApplicationConfig.getUserFractionStep())
+                applicationName = config.applicationName,
+                packageName = config.packageName,
+                p12File = ConfigLoader.getP12KeyFile(),
+                serviceAccountEmail = config.serviceAccountEmail,
+                userFractionSteps = config.userFractionStep)
     }
 
     private fun dispatchStepRelease(): ReleaseDispatcher.StepReleaseResult {
-        return releaseDispatcher.executeStepRelease()
+        val result = releaseDispatcher.executeStepRelease()
+        when (result) {
+            is ReleaseDispatcher.StepReleaseResult.UpdatedTrack -> {
+                notificationProviders.postExpansionMessage(result.newTrack, result.oldTrack)
+            }
+            is ReleaseDispatcher.StepReleaseResult.NoUpdatedTrack -> {
+                //do nothing.
+            }
+        }
+        return result
     }
 
     private fun trackInfoToString(track: Track): String {

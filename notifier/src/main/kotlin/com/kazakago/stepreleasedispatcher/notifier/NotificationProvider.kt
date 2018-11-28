@@ -4,7 +4,7 @@ import com.google.api.services.androidpublisher.model.Track
 
 interface NotificationProvider {
 
-    class Builder(val applicationName: String, private val type: Type) {
+    class Builder(private val applicationName: String, private val type: Type) {
         fun build(): NotificationProvider {
             return when (type) {
                 is Type.Slack -> SlackProvider(applicationName, type.webHookUrl)

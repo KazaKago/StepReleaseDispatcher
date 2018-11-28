@@ -1,6 +1,6 @@
 package com.kazakago.stepreleasedispatcher.server
 
-import com.kazakago.stepreleasedispatcher.config.ApplicationConfig
+import com.kazakago.stepreleasedispatcher.config.ConfigLoader
 import com.kazakago.stepreleasedispatcher.notifier.NotificationProvider
 import com.kazakago.stepreleasedispatcher.notifier.NotificationProviders
 import com.kazakago.stepreleasedispatcher.releasedispatcher.ReleaseDispatcher
@@ -10,15 +10,16 @@ import org.quartz.JobExecutionContext
 class StepReleaseJob : Job {
 
     private val notificationProviders = initializeNotificationProvider()
+    private val config = ConfigLoader.load()
 
     override fun execute(context: JobExecutionContext) {
         try {
             val stepReleaseDispatcher = ReleaseDispatcher(
-                    applicationName = ApplicationConfig.getApplicationName(),
-                    packageName = ApplicationConfig.getPackageName(),
-                    p12File = ApplicationConfig.getP12KeyFile(),
-                    serviceAccountEmail = ApplicationConfig.getServiceAccountEmail(),
-                    userFractionSteps = ApplicationConfig.getUserFractionStep())
+                    applicationName = config.applicationName,
+                    packageName = config.packageName,
+                    p12File = ConfigLoader.getP12KeyFile(),
+                    serviceAccountEmail = config.serviceAccountEmail,
+                    userFractionSteps = config.userFractionStep)
             when (val result = stepReleaseDispatcher.executeStepRelease()) {
                 is ReleaseDispatcher.StepReleaseResult.UpdatedTrack -> notificationProviders.postExpansionMessage(result.newTrack, result.oldTrack)
                 is ReleaseDispatcher.StepReleaseResult.NoUpdatedTrack -> notificationProviders.postNoExpansionMessage(result.currentTrack)
@@ -30,8 +31,9 @@ class StepReleaseJob : Job {
 
     private fun initializeNotificationProvider(): NotificationProviders {
         return NotificationProviders(
-                applicationName = ApplicationConfig.getApplicationName(),
-                slackType = NotificationProvider.Type.Slack(ApplicationConfig.getSlackWebHookUrl()))
+                applicationName = config.applicationName,
+                slackType = NotificationProvider.Type.Slack(config.slackWebHookUrl)
+        )
     }
 
 }
