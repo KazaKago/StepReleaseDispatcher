@@ -13,7 +13,7 @@ class NotificationProviders(var applicationName: String, slackType: Notification
 
     private fun initializeProviderList(): List<NotificationProvider> {
         val providerList = mutableListOf<NotificationProvider>()
-        slackType?.let { providerList.add(NotificationProvider.Builder(applicationName, it).build()) }
+        slackType?.let { if (it.isValid()) providerList.add(NotificationProvider.Builder(applicationName, it).build()) }
         return providerList
     }
 

@@ -13,7 +13,13 @@ interface NotificationProvider {
     }
 
     sealed class Type {
-        class Slack(val webHookUrl: String) : Type()
+        class Slack(val webHookUrl: String) : Type() {
+            override fun isValid(): Boolean {
+                return webHookUrl.isNotBlank()
+            }
+        }
+
+        abstract fun isValid(): Boolean
     }
 
     fun postExpansionMessage(newTrack: Track, oldTrack: Track)
