@@ -313,7 +313,7 @@ object ServerProcessor {
                     call.receiveMultipart().apply {
                         forEachPart { part ->
                             if (part.name == "user_fraction_step" && part is PartData.FormItem) {
-                                val steps = part.value.split(",").map { it.toDouble() }
+                                val steps = part.value.trim().split(",").map { it.toDouble() }
                                 config.userFractionStep = steps
                                 ConfigLoader.apply(config)
                                 releaseDispatcher.userFractionSteps = steps
