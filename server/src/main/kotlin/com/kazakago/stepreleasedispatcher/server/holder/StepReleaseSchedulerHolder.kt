@@ -6,7 +6,8 @@ import com.kazakago.stepreleasedispatcher.server.job.StepReleaseJob
 object StepReleaseSchedulerHolder {
 
     val INSTANCE = StepReleaseJobScheduler(
-            dispatchSchedule = ConfigHolder.INSTANCE.dispatchSchedule,
-            jobClass = StepReleaseJob::class)
+        dispatchSchedule = ConfigHolder.INSTANCE.dispatchSchedule,
+        jobClass = StepReleaseJob::class
+    )
 
 }

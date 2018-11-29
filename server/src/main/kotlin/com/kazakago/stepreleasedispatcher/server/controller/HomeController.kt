@@ -59,7 +59,7 @@ fun Routing.home() {
                             submitInput { value = "executeStepRelease" }
                         }
                     }
-                    h2(classes = "display-4")  {
+                    h2(classes = "display-4") {
                         +"Schedule"
                     }
                     hr(classes = "my-4")
@@ -90,7 +90,7 @@ fun Routing.home() {
                             submitInput { value = "register" }
                         }
                     }
-                    h2(classes = "display-4")  {
+                    h2(classes = "display-4") {
                         +"Config"
                     }
                     hr(classes = "my-4")

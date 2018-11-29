@@ -40,12 +40,12 @@ object AndroidPublisherHelper {
     private fun authorizeWithServiceAccount(serviceAccountEmail: String, p12File: File): Credential {
         // Build service account credential.
         return GoogleCredential.Builder()
-                .setTransport(HttpTransport)
-                .setJsonFactory(JsonFactory)
-                .setServiceAccountId(serviceAccountEmail)
-                .setServiceAccountScopes(setOf(AndroidPublisherScopes.ANDROIDPUBLISHER))
-                .setServiceAccountPrivateKeyFromP12File(p12File)
-                .build()
+            .setTransport(HttpTransport)
+            .setJsonFactory(JsonFactory)
+            .setServiceAccountId(serviceAccountEmail)
+            .setServiceAccountScopes(setOf(AndroidPublisherScopes.ANDROIDPUBLISHER))
+            .setServiceAccountPrivateKeyFromP12File(p12File)
+            .build()
     }
 
     /**
@@ -66,8 +66,8 @@ object AndroidPublisherHelper {
 
         // Set up and return API client.
         return AndroidPublisher.Builder(HttpTransport, JsonFactory, credential)
-                .setApplicationName(applicationName)
-                .build()
+            .setApplicationName(applicationName)
+            .build()
     }
 
 }

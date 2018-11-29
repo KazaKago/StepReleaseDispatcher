@@ -15,11 +15,12 @@ class StepReleaseJob : Job {
     override fun execute(context: JobExecutionContext) {
         try {
             val stepReleaseDispatcher = ReleaseDispatcher(
-                    applicationName = config.applicationName,
-                    packageName = config.packageName,
-                    p12File = ConfigLoader.getP12KeyFile(),
-                    serviceAccountEmail = config.serviceAccountEmail,
-                    userFractionSteps = config.userFractionStep)
+                applicationName = config.applicationName,
+                packageName = config.packageName,
+                p12File = ConfigLoader.getP12KeyFile(),
+                serviceAccountEmail = config.serviceAccountEmail,
+                userFractionSteps = config.userFractionStep
+            )
             when (val result = stepReleaseDispatcher.executeStepRelease()) {
                 is ReleaseDispatcher.StepReleaseResult.UpdatedTrack -> notificationProviders.postExpansionMessage(result.newTrack, result.oldTrack)
                 is ReleaseDispatcher.StepReleaseResult.NoUpdatedTrack -> notificationProviders.postNoExpansionMessage(result.currentTrack)
@@ -31,8 +32,8 @@ class StepReleaseJob : Job {
 
     private fun initializeNotificationProvider(): NotificationProviders {
         return NotificationProviders(
-                applicationName = config.applicationName,
-                slackType = NotificationProvider.Type.Slack(config.slackWebHookUrl)
+            applicationName = config.applicationName,
+            slackType = NotificationProvider.Type.Slack(config.slackWebHookUrl)
         )
     }
 

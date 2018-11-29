@@ -21,12 +21,12 @@ class StepReleaseJobScheduler<T : Job>(dispatchSchedule: String, jobClass: KClas
     private fun initializeScheduler(): Scheduler {
         val scheduler = StdSchedulerFactory.getDefaultScheduler()!!
         val job = JobBuilder.newJob(jobClass.java)
-                .withIdentity("StepReleaseJob", "StepReleaseJobScheduler")
-                .build()
+            .withIdentity("StepReleaseJob", "StepReleaseJobScheduler")
+            .build()
         val trigger = TriggerBuilder.newTrigger()
-                .withIdentity("StepReleaseJobTrigger", "StepReleaseJobScheduler")
-                .withSchedule(CronScheduleBuilder.cronSchedule(dispatchSchedule))
-                .build()
+            .withIdentity("StepReleaseJobTrigger", "StepReleaseJobScheduler")
+            .withSchedule(CronScheduleBuilder.cronSchedule(dispatchSchedule))
+            .build()
         scheduler.scheduleJob(job, trigger)
         return scheduler
     }

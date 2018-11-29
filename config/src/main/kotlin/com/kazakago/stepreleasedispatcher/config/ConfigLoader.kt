@@ -12,9 +12,9 @@ object ConfigLoader {
     private val configFile = File(preferencesFolder, "config.json")
 
     private val moshi = Moshi.Builder()
-            .add(KotlinJsonAdapterFactory())
-            .add(DoubleListAdapter.FACTORY)
-            .build()
+        .add(KotlinJsonAdapterFactory())
+        .add(DoubleListAdapter.FACTORY)
+        .build()
     private val jsonAdapter = moshi.adapter(Config::class.java)
 
     init {

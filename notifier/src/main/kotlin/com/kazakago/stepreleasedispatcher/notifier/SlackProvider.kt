@@ -10,34 +10,48 @@ class SlackProvider(applicationName: String, slackWebHookUrl: String) : Notifica
     private val slackApi = SlackApi(slackWebHookUrl)
 
     override fun postExpansionMessage(newTrack: Track, oldTrack: Track) {
-        slackApi.call(SlackMessage(botUserName(), expansionSummaryMessage())
+        slackApi.call(
+            SlackMessage(botUserName(), expansionSummaryMessage())
                 .setIcon(botIconUrl().toString())
-                .addAttachments(SlackAttachment("")
+                .addAttachments(
+                    SlackAttachment("")
                         .setColor(oldTrackHexColor())
                         .setTitle(oldTrackTitle())
-                        .setText(oldTrack.toFormattedString()))
-                .addAttachments(SlackAttachment("")
+                        .setText(oldTrack.toFormattedString())
+                )
+                .addAttachments(
+                    SlackAttachment("")
                         .setColor(newTrackHexColor())
                         .setTitle(newTrackTitle())
-                        .setText(newTrack.toFormattedString())))
+                        .setText(newTrack.toFormattedString())
+                )
+        )
     }
 
     override fun postNoExpansionMessage(currentTrack: Track) {
-        slackApi.call(SlackMessage(botUserName(), noExpansionSummaryMessage())
+        slackApi.call(
+            SlackMessage(botUserName(), noExpansionSummaryMessage())
                 .setIcon(botIconUrl().toString())
-                .addAttachments(SlackAttachment("")
+                .addAttachments(
+                    SlackAttachment("")
                         .setColor(currentTrackHexColor())
                         .setTitle(currentTrackTitle())
-                        .setText(currentTrack.toFormattedString())))
+                        .setText(currentTrack.toFormattedString())
+                )
+        )
     }
 
     override fun postErrorMessage(exception: Exception) {
-        slackApi.call(SlackMessage(botUserName(), errorSummaryMessage())
+        slackApi.call(
+            SlackMessage(botUserName(), errorSummaryMessage())
                 .setIcon(botIconUrl().toString())
-                .addAttachments(SlackAttachment("")
+                .addAttachments(
+                    SlackAttachment("")
                         .setColor(errorHexColor())
                         .setTitle(errorTrackTitle())
-                        .setText(exception.localizedMessage)))
+                        .setText(exception.localizedMessage)
+                )
+        )
     }
 
 }
