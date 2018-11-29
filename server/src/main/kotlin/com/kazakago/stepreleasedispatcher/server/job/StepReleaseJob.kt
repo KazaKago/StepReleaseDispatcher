@@ -1,4 +1,4 @@
-package com.kazakago.stepreleasedispatcher.server
+package com.kazakago.stepreleasedispatcher.server.job
 
 import com.kazakago.stepreleasedispatcher.config.ConfigLoader
 import com.kazakago.stepreleasedispatcher.notifier.NotificationProvider
