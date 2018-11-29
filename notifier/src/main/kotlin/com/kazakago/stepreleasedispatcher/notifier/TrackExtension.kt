@@ -1,4 +1,4 @@
-package com.kazakago.stepreleasedispatcher.server.extension
+package com.kazakago.stepreleasedispatcher.notifier
 
 import com.google.api.services.androidpublisher.model.Track
 import com.google.api.services.androidpublisher.model.TrackRelease

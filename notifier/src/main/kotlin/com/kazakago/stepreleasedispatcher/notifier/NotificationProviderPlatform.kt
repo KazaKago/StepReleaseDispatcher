@@ -1,7 +1,5 @@
 package com.kazakago.stepreleasedispatcher.notifier
 
-import com.google.api.services.androidpublisher.model.Track
-import com.google.api.services.androidpublisher.model.TrackRelease
 import java.net.URL
 
 abstract class NotificationProviderPlatform(protected open val applicationName: String) : NotificationProvider {
@@ -56,19 +54,6 @@ abstract class NotificationProviderPlatform(protected open val applicationName: 
 
     protected open fun errorHexColor(): String {
         return "#F44336"
-    }
-
-    protected open fun trackInfoToString(track: Track): String {
-        val releaseInfoStringList = track.releases.map { releaseInfoToString(it) }
-        return releaseInfoStringList.joinToString("\n")
-    }
-
-    protected open fun releaseInfoToString(release: TrackRelease): String {
-        var text = "name : " + release.name
-        text += "     version : " + release.versionCodes.joinToString(",")
-        text += "     status : " + release.status.toString()
-        release.userFraction?.let { text += "     userFraction : " + (it * 100).toString() + "%" }
-        return text
     }
 
 }

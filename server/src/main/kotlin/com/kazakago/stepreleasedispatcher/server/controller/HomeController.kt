@@ -1,9 +1,11 @@
 package com.kazakago.stepreleasedispatcher.server.controller
 
-import com.kazakago.stepreleasedispatcher.server.extension.toFormattedString
+import com.kazakago.stepreleasedispatcher.notifier.toFormattedString
 import com.kazakago.stepreleasedispatcher.server.holder.ConfigHolder
 import com.kazakago.stepreleasedispatcher.server.holder.ReleaseDispatcherHolder
 import com.kazakago.stepreleasedispatcher.server.holder.StepReleaseSchedulerHolder
+import com.kazakago.stepreleasedispatcher.server.html.addBootstrapMetadata
+import com.kazakago.stepreleasedispatcher.server.html.addBootstrapScript
 import io.ktor.application.call
 import io.ktor.html.respondHtml
 import io.ktor.routing.Routing
@@ -16,9 +18,7 @@ fun Routing.home() {
         val currentTrackInfo = runCatching { ReleaseDispatcherHolder.INSTANCE.currentTrackInfo() }
         call.respondHtml {
             head {
-                meta(charset = "utf-8")
-                meta(name = "viewport", content = "width=device-width, initial-scale=1, shrink-to-fit=no")
-                styleLink("/webjars/bootstrap/css/bootstrap.min.css")
+                addBootstrapMetadata()
                 title { +ConfigHolder.INSTANCE.applicationName }
             }
             body {
@@ -59,9 +59,10 @@ fun Routing.home() {
                             submitInput { value = "executeStepRelease" }
                         }
                     }
-                    h2 {
+                    h2(classes = "display-4")  {
                         +"Schedule"
                     }
+                    hr(classes = "my-4")
                     p {
                         if (StepReleaseSchedulerHolder.INSTANCE.isActive()) {
                             +"Status: Active"
@@ -89,9 +90,10 @@ fun Routing.home() {
                             submitInput { value = "register" }
                         }
                     }
-                    h2 {
+                    h2(classes = "display-4")  {
                         +"Config"
                     }
+                    hr(classes = "my-4")
                     h3 {
                         +"Required"
                     }
@@ -154,9 +156,7 @@ fun Routing.home() {
                         }
                     }
                 }
-                script(src = "/webjars/jquery/jquery.min.js") {}
-                script(src = "/webjars/popper.js/umd/popper.min.js") {}
-                script(src = "/webjars/bootstrap/js/bootstrap.min.js") {}
+                addBootstrapScript()
             }
 
         }

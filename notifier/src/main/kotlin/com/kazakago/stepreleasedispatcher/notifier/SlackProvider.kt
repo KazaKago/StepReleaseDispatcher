@@ -15,11 +15,11 @@ class SlackProvider(applicationName: String, slackWebHookUrl: String) : Notifica
                 .addAttachments(SlackAttachment("")
                         .setColor(oldTrackHexColor())
                         .setTitle(oldTrackTitle())
-                        .setText(trackInfoToString(oldTrack)))
+                        .setText(oldTrack.toFormattedString()))
                 .addAttachments(SlackAttachment("")
                         .setColor(newTrackHexColor())
                         .setTitle(newTrackTitle())
-                        .setText(trackInfoToString(newTrack))))
+                        .setText(newTrack.toFormattedString())))
     }
 
     override fun postNoExpansionMessage(currentTrack: Track) {
@@ -28,7 +28,7 @@ class SlackProvider(applicationName: String, slackWebHookUrl: String) : Notifica
                 .addAttachments(SlackAttachment("")
                         .setColor(currentTrackHexColor())
                         .setTitle(currentTrackTitle())
-                        .setText(trackInfoToString(currentTrack))))
+                        .setText(currentTrack.toFormattedString())))
     }
 
     override fun postErrorMessage(exception: Exception) {

@@ -1,10 +1,12 @@
 package com.kazakago.stepreleasedispatcher.server.controller
 
+import com.kazakago.stepreleasedispatcher.notifier.toFormattedString
 import com.kazakago.stepreleasedispatcher.releasedispatcher.ReleaseDispatcher
-import com.kazakago.stepreleasedispatcher.server.extension.toFormattedString
 import com.kazakago.stepreleasedispatcher.server.holder.ConfigHolder
 import com.kazakago.stepreleasedispatcher.server.holder.NotificationProvidersHolder
 import com.kazakago.stepreleasedispatcher.server.holder.ReleaseDispatcherHolder
+import com.kazakago.stepreleasedispatcher.server.html.addBootstrapMetadata
+import com.kazakago.stepreleasedispatcher.server.html.addBootstrapScript
 import io.ktor.application.call
 import io.ktor.html.respondHtml
 import io.ktor.routing.Routing
@@ -18,11 +20,8 @@ fun Routing.execute() {
             val result = runCatching { dispatchStepRelease() }
             call.respondHtml {
                 head {
+                    addBootstrapMetadata()
                     title { +ConfigHolder.INSTANCE.applicationName }
-                    styleLink("/webjars/bootstrap/css/bootstrap.min.css")
-                    script(src = "/webjars/jquery/jquery.min.js") {}
-                    script(src = "/webjars/popper.js/umd/popper.min.js") {}
-                    script(src = "/webjars/bootstrap/js/bootstrap.min.js") {}
                 }
                 body {
                     if (result.isSuccess) {
@@ -61,6 +60,7 @@ fun Routing.execute() {
                             submitInput { value = "back to Top" }
                         }
                     }
+                    addBootstrapScript()
                 }
             }
         }
