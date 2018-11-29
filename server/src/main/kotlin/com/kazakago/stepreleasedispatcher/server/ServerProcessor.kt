@@ -17,6 +17,7 @@ import io.ktor.request.receiveMultipart
 import io.ktor.response.respondRedirect
 import io.ktor.routing.get
 import io.ktor.routing.post
+import io.ktor.routing.route
 import io.ktor.routing.routing
 import io.ktor.server.engine.ApplicationEngine
 import io.ktor.server.engine.embeddedServer
@@ -39,7 +40,7 @@ object ServerProcessor {
             routing {
                 get("/") {
                     val validConfig = runCatching { releaseDispatcher.validConfig() }
-                    val currentTrackInfo = runCatching { (releaseDispatcher.currentTrackInfo()) }
+                    val currentTrackInfo = runCatching { releaseDispatcher.currentTrackInfo() }
                     call.respondHtml {
                         head {
                             meta(charset = "utf-8")
@@ -187,154 +188,162 @@ object ServerProcessor {
 
                     }
                 }
-                post("/scheduler/start") {
-                    stepReleaseJobScheduler.start()
-                    call.respondRedirect("/")
+                route("/scheduler") {
+                    post("/start") {
+                        stepReleaseJobScheduler.start()
+                        call.respondRedirect("/")
+                    }
+                    post("/stop") {
+                        stepReleaseJobScheduler.shutdown()
+                        call.respondRedirect("/")
+                    }
                 }
-                post("/scheduler/stop") {
-                    stepReleaseJobScheduler.shutdown()
-                    call.respondRedirect("/")
-                }
-                post("/execute/step_release") {
-                    val result = runCatching { dispatchStepRelease() }
-                    call.respondHtml {
-                        head {
-                            title { +config.applicationName }
-                            styleLink("/webjars/bootstrap/css/bootstrap.min.css")
-                            script(src = "/webjars/jquery/jquery.min.js") {}
-                            script(src = "/webjars/popper.js/umd/popper.min.js") {}
-                            script(src = "/webjars/bootstrap/js/bootstrap.min.js") {}
-                        }
-                        body {
-                            if (result.isSuccess) {
-                                val nativeResult = result.getOrThrow()
-                                when (nativeResult) {
-                                    is ReleaseDispatcher.StepReleaseResult.UpdatedTrack -> {
-                                        h1 {
-                                            +"Track Updated!"
+                route("/execute") {
+                    post("/step_release") {
+                        val result = runCatching { dispatchStepRelease() }
+                        call.respondHtml {
+                            head {
+                                title { +config.applicationName }
+                                styleLink("/webjars/bootstrap/css/bootstrap.min.css")
+                                script(src = "/webjars/jquery/jquery.min.js") {}
+                                script(src = "/webjars/popper.js/umd/popper.min.js") {}
+                                script(src = "/webjars/bootstrap/js/bootstrap.min.js") {}
+                            }
+                            body {
+                                if (result.isSuccess) {
+                                    val nativeResult = result.getOrThrow()
+                                    when (nativeResult) {
+                                        is ReleaseDispatcher.StepReleaseResult.UpdatedTrack -> {
+                                            h1 {
+                                                +"Track Updated!"
+                                            }
+                                            p {
+                                                +trackInfoToString(nativeResult.newTrack)
+                                            }
+                                            p {
+                                                +trackInfoToString(nativeResult.oldTrack)
+                                            }
                                         }
-                                        p {
-                                            +trackInfoToString(nativeResult.newTrack)
-                                        }
-                                        p {
-                                            +trackInfoToString(nativeResult.oldTrack)
+                                        is ReleaseDispatcher.StepReleaseResult.NoUpdatedTrack -> {
+                                            h1 {
+                                                +"No Updated"
+                                            }
+                                            p {
+                                                +trackInfoToString(nativeResult.currentTrack)
+                                            }
                                         }
                                     }
-                                    is ReleaseDispatcher.StepReleaseResult.NoUpdatedTrack -> {
-                                        h1 {
-                                            +"No Updated"
-                                        }
-                                        p {
-                                            +trackInfoToString(nativeResult.currentTrack)
-                                        }
+                                } else {
+                                    h1 {
+                                        +"Error Occurred"
+                                    }
+                                    p {
+                                        +"Error ${result.exceptionOrNull()?.localizedMessage}"
                                     }
                                 }
-                            } else {
-                                h1 {
-                                    +"Error Occurred"
-                                }
-                                p {
-                                    +"Error ${result.exceptionOrNull()?.localizedMessage}"
-                                }
-                            }
-                            form("/", method = FormMethod.get) {
-                                p {
-                                    submitInput { value = "back to Top" }
+                                form("/", method = FormMethod.get) {
+                                    p {
+                                        submitInput { value = "back to Top" }
+                                    }
                                 }
                             }
                         }
                     }
                 }
-                post("/upload/p12") {
-                    call.receiveMultipart().apply {
-                        forEachPart { part ->
-                            if (part.name == "p12file" && part is PartData.FileItem) {
-                                part.streamProvider().use { inputStream -> ConfigLoader.putP12KeyFile(inputStream) }
+                route("/upload") {
+                    post("/p12") {
+                        call.receiveMultipart().apply {
+                            forEachPart { part ->
+                                if (part.name == "p12file" && part is PartData.FileItem) {
+                                    part.streamProvider().use { inputStream -> ConfigLoader.putP12KeyFile(inputStream) }
+                                }
+                                part.dispose()
                             }
-                            part.dispose()
                         }
+                        call.respondRedirect("/")
                     }
-                    call.respondRedirect("/")
                 }
-                post("/config/package_name") {
-                    call.receiveMultipart().apply {
-                        forEachPart { part ->
-                            if (part.name == "package_name" && part is PartData.FormItem) {
-                                config.packageName = part.value
-                                ConfigLoader.apply(config)
-                                releaseDispatcher.packageName = part.value
+                route("/config") {
+                    post("/package_name") {
+                        call.receiveMultipart().apply {
+                            forEachPart { part ->
+                                if (part.name == "package_name" && part is PartData.FormItem) {
+                                    config.packageName = part.value
+                                    ConfigLoader.apply(config)
+                                    releaseDispatcher.packageName = part.value
+                                }
+                                part.dispose()
                             }
-                            part.dispose()
                         }
+                        call.respondRedirect("/")
                     }
-                    call.respondRedirect("/")
-                }
-                post("/config/email") {
-                    call.receiveMultipart().apply {
-                        forEachPart { part ->
-                            if (part.name == "email" && part is PartData.FormItem) {
-                                config.serviceAccountEmail = part.value
-                                ConfigLoader.apply(config)
-                                releaseDispatcher.serviceAccountEmail = part.value
+                    post("/email") {
+                        call.receiveMultipart().apply {
+                            forEachPart { part ->
+                                if (part.name == "email" && part is PartData.FormItem) {
+                                    config.serviceAccountEmail = part.value
+                                    ConfigLoader.apply(config)
+                                    releaseDispatcher.serviceAccountEmail = part.value
+                                }
+                                part.dispose()
                             }
-                            part.dispose()
                         }
+                        call.respondRedirect("/")
                     }
-                    call.respondRedirect("/")
-                }
-                post("/config/application_name") {
-                    call.receiveMultipart().apply {
-                        forEachPart { part ->
-                            if (part.name == "application_name" && part is PartData.FormItem) {
-                                config.applicationName = part.value
-                                ConfigLoader.apply(config)
-                                releaseDispatcher.applicationName = part.value
-                                notificationProviders.applicationName = part.value
+                    post("/application_name") {
+                        call.receiveMultipart().apply {
+                            forEachPart { part ->
+                                if (part.name == "application_name" && part is PartData.FormItem) {
+                                    config.applicationName = part.value
+                                    ConfigLoader.apply(config)
+                                    releaseDispatcher.applicationName = part.value
+                                    notificationProviders.applicationName = part.value
+                                }
+                                part.dispose()
                             }
-                            part.dispose()
                         }
+                        call.respondRedirect("/")
                     }
-                    call.respondRedirect("/")
-                }
-                post("/config/slack_web_hook_url") {
-                    call.receiveMultipart().apply {
-                        forEachPart { part ->
-                            if (part.name == "slack_web_hook_url" && part is PartData.FormItem) {
-                                config.slackWebHookUrl = part.value
-                                ConfigLoader.apply(config)
-                                notificationProviders.slackType = NotificationProvider.Type.Slack(part.value)
+                    post("/slack_web_hook_url") {
+                        call.receiveMultipart().apply {
+                            forEachPart { part ->
+                                if (part.name == "slack_web_hook_url" && part is PartData.FormItem) {
+                                    config.slackWebHookUrl = part.value
+                                    ConfigLoader.apply(config)
+                                    notificationProviders.slackType = NotificationProvider.Type.Slack(part.value)
+                                }
+                                part.dispose()
                             }
-                            part.dispose()
                         }
+                        call.respondRedirect("/")
                     }
-                    call.respondRedirect("/")
-                }
-                post("/config/user_fraction_step") {
-                    call.receiveMultipart().apply {
-                        forEachPart { part ->
-                            if (part.name == "user_fraction_step" && part is PartData.FormItem) {
-                                val steps = part.value.trim().split(",").map { it.toDouble() }
-                                config.userFractionStep = steps
-                                ConfigLoader.apply(config)
-                                releaseDispatcher.userFractionSteps = steps
+                    post("/user_fraction_step") {
+                        call.receiveMultipart().apply {
+                            forEachPart { part ->
+                                if (part.name == "user_fraction_step" && part is PartData.FormItem) {
+                                    val steps = part.value.trim().split(",").map { it.toDouble() }
+                                    config.userFractionStep = steps
+                                    ConfigLoader.apply(config)
+                                    releaseDispatcher.userFractionSteps = steps
+                                }
+                                part.dispose()
                             }
-                            part.dispose()
                         }
+                        call.respondRedirect("/")
                     }
-                    call.respondRedirect("/")
-                }
-                post("/config/dispatch_schedule") {
-                    call.receiveMultipart().apply {
-                        forEachPart { part ->
-                            if (part.name == "dispatch_schedule" && part is PartData.FormItem) {
-                                config.dispatchSchedule = part.value
-                                ConfigLoader.apply(config)
-                                stepReleaseJobScheduler.dispatchSchedule = part.value
+                    post("/dispatch_schedule") {
+                        call.receiveMultipart().apply {
+                            forEachPart { part ->
+                                if (part.name == "dispatch_schedule" && part is PartData.FormItem) {
+                                    config.dispatchSchedule = part.value
+                                    ConfigLoader.apply(config)
+                                    stepReleaseJobScheduler.dispatchSchedule = part.value
+                                }
+                                part.dispose()
                             }
-                            part.dispose()
                         }
+                        call.respondRedirect("/")
                     }
-                    call.respondRedirect("/")
                 }
             }
         }
