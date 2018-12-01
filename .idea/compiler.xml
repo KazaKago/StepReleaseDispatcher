@@ -2,10 +2,18 @@
 <project version="4">
   <component name="CompilerConfiguration">
     <bytecodeTargetLevel>
-      <module name="KtorSample_main" target="1.8" />
-      <module name="KtorSample_test" target="1.8" />
-      <module name="notification_main" target="1.8" />
-      <module name="notification_test" target="1.8" />
+      <module name="com.kazakago.app.main" target="1.8" />
+      <module name="com.kazakago.app.test" target="1.8" />
+      <module name="StepReleaseDispatcher.config.main" target="1.8" />
+      <module name="StepReleaseDispatcher.config.test" target="1.8" />
+      <module name="StepReleaseDispatcher.notifier.main" target="1.8" />
+      <module name="StepReleaseDispatcher.notifier.test" target="1.8" />
+      <module name="StepReleaseDispatcher.releasedispatcher.main" target="1.8" />
+      <module name="StepReleaseDispatcher.releasedispatcher.test" target="1.8" />
+      <module name="StepReleaseDispatcher.scheduler.main" target="1.8" />
+      <module name="StepReleaseDispatcher.scheduler.test" target="1.8" />
+      <module name="StepReleaseDispatcher.server.main" target="1.8" />
+      <module name="StepReleaseDispatcher.server.test" target="1.8" />
       <module name="StepReleaseDispatcher_main" target="1.8" />
       <module name="StepReleaseDispatcher_test" target="1.8" />
     </bytecodeTargetLevel>
