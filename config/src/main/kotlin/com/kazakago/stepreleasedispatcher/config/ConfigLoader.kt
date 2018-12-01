@@ -19,6 +19,7 @@ object ConfigLoader {
 
     init {
         if (!configFile.exists()) {
+            configFile.parentFile.mkdirs()
             configFile.createNewFile()
             apply(Config())
         }
