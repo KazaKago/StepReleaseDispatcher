@@ -15,7 +15,7 @@ object ServerProcessor {
     private val nativeServer: ApplicationEngine
 
     init {
-        nativeServer = embeddedServer(Netty, port = 8080) {
+        nativeServer = embeddedServer(Netty, port = 4010) {
             install(Webjars)
             routing {
                 home()
