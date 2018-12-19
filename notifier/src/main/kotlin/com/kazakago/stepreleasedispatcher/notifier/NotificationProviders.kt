@@ -4,12 +4,17 @@ import com.google.api.services.androidpublisher.model.Track
 
 class NotificationProviders(var applicationName: String, slackType: NotificationProvider.Type.Slack? = null) {
 
-    var slackType = slackType
+    var slackType: NotificationProvider.Type.Slack? = null
         set(value) {
             field = value
             notificationProviderList = initializeProviderList()
         }
     private var notificationProviderList = listOf<NotificationProvider>()
+
+    init {
+        this.slackType = slackType
+        notificationProviderList = initializeProviderList()
+    }
 
     private fun initializeProviderList(): List<NotificationProvider> {
         val providerList = mutableListOf<NotificationProvider>()
